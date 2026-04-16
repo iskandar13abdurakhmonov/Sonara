@@ -11,6 +11,11 @@ const fontMono = Geist_Mono({
   variable: "--font-mono",
 })
 
+export const metadata = {
+  title: "Sonara",
+  description: "Feel the sound. Discover your vibe.",
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{
