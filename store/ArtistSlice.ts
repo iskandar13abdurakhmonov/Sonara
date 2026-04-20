@@ -1,5 +1,5 @@
 import type { StateCreator } from "zustand"
-import { getArtists } from "@/lib/artistService"
+import { getArtist, searchArtists } from "@/lib/artistService"
 
 export type SpotifyArtist = {
   id: string
@@ -31,8 +31,10 @@ export type ArtistSlice = {
   searchLoading: boolean
   searchError: string | null
   searchResults: SpotifyArtist[]
+  artist: SpotifyArtist
   setQuery: (query: string) => void
   searchArtist: (query: string) => Promise<void>
+  getArtist: (id: string) => Promise<void>
 }
 
 export const createArtistSlice: StateCreator<ArtistSlice> = (set) => ({
@@ -58,7 +60,7 @@ export const createArtistSlice: StateCreator<ArtistSlice> = (set) => ({
     })
 
     try {
-      const { data } = await getArtists(trimmedQuery)
+      const { data } = await searchArtists(trimmedQuery)
       const artists = (data as SpotifySearchResponse).artists?.items ?? []
 
       set({
@@ -75,4 +77,19 @@ export const createArtistSlice: StateCreator<ArtistSlice> = (set) => ({
       set({ searchLoading: false })
     }
   },
+  getArtist: async (id: string) => {
+    try {
+      const { data } = await getArtist(id)
+
+      set({
+        artist: data
+      })
+    } catch (error) {
+      set({
+        artist: []
+      })
+    } finally {
+      set({ searchLoading: false })
+    }
+  }
 })

@@ -1,6 +1,5 @@
 "use client"
 
-import Link from "next/link"
 import { type ChangeEvent, type FormEvent } from "react"
 import { PlusIcon, SearchIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -17,8 +16,21 @@ import {
 } from "@/components/ui/item"
 import { SpotifyArtist } from "@/store/ArtistSlice"
 import Image from "next/image"
+import {
+  Card,
+  CardAction,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { useRouter } from "next/navigation"
 
 export default function Page() {
+
+  const router = useRouter()
+
   const query = useGlobalStore((state) => state.query)
   const searchLoading = useGlobalStore((state) => state.searchLoading)
   const searchResults = useGlobalStore((state) => state.searchResults)
@@ -33,6 +45,10 @@ export default function Page() {
     e.preventDefault()
 
     await searchArtist(query)
+  }
+
+  const handleViewArtist = (id: string) => {
+    router.push(`/player/${id}`)
   }
 
   return (
@@ -50,40 +66,48 @@ export default function Page() {
             size="icon"
             type="submit"
             disabled={searchLoading}
-            className="border-white/15 bg-white text-slate-950 hover:bg-cyan-50"
+            className="bg-white hover:bg-cyan-50"
           >
             <SearchIcon />
           </Button>
         </div>
       </form>
 
-      <ItemGroup className="mt-3">
-        {searchResults.map((artist: SpotifyArtist) => {
-          const artistImageUrl = artist.images?.[0]?.url
+      <div className="grid grid-cols-6 gap-4 mt-4">
+        {
+          searchResults.map((artist: SpotifyArtist) => {
+            const artistImageUrl = artist.images?.[0]?.url
 
-          return (
-          <Item key={artist.id} variant="outline">
-            <ItemMedia>
+            return (
+              <Card key={artist.id} className="relative mx-auto w-full max-w-sm pt-0">
+                <div className="absolute inset-0 z-30 aspect-square" />
                 <Image
-                  src={artistImageUrl}
+                  src={artistImageUrl || null}
                   alt={artist.name}
-                  width="80"
+                  width="90"
                   height="80"
-                  className="aspect-square w-full rounded-sm object-cover"
+                  quality={100}
+                  sizes="100"
+                  className="relative z-20 aspect-square w-full object-contain"
                 />
-            </ItemMedia>
-            <ItemContent className="gap-1">
-              <ItemTitle>{artist.name}</ItemTitle>
-              <ItemDescription>{artist.type}</ItemDescription>
-            </ItemContent>
-            <ItemActions>
-              <Button variant="ghost" size="icon" className="rounded-full">
-                <PlusIcon />
-              </Button>
-            </ItemActions>
-          </Item>
-        )})}
-      </ItemGroup>
+                <CardHeader>
+                  <CardAction>
+                    <Badge variant="secondary">{artist.type}</Badge>
+                  </CardAction>
+                  <CardTitle>{artist.name}</CardTitle>
+                  {/*<CardDescription>*/}
+                  {/*  A practical talk on component APIs, accessibility, and*/}
+                  {/*  shipping faster.*/}
+                  {/*</CardDescription>*/}
+                </CardHeader>
+                <CardFooter>
+                  <Button className="w-full" onClick={() => handleViewArtist(artist.id)}>View Artist</Button>
+                </CardFooter>
+              </Card>
+            )
+          })
+        }
+      </div>
     </section>
   )
 }

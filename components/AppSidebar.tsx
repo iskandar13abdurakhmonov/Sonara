@@ -107,8 +107,8 @@ export default function AppSidebar() {
 
   const mainMenuItems: MenuItem[] = [
     {
-      title: "Dashboard",
-      url: "/",
+      title: "Player",
+      url: "/player",
       icon: HomeIcon,
     },
     {
