@@ -6,21 +6,32 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import {
   AUTH_STORAGE_KEY,
+  DEFAULT_POST_LOGIN_PATH,
   type SonaraAuthResult,
-  getSafeNextPath,
-  parseAuthHashParams,
 } from "@/lib/auth"
 
 export default function AuthCallbackPage() {
   const router = useRouter()
   const [authResult, setAuthResult] = useState<SonaraAuthResult | null>(null)
-  const [nextPath, setNextPath] = useState("/player")
+  const [nextPath, setNextPath] = useState(DEFAULT_POST_LOGIN_PATH)
   const [redirecting, setRedirecting] = useState(false)
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
-    const parsedNextPath = getSafeNextPath(params.get("next"))
-    const parsedResult = parseAuthHashParams(window.location.hash)
+    const nextParam = params.get("next")
+    const parsedNextPath =
+      nextParam && nextParam.startsWith("/") ? nextParam : DEFAULT_POST_LOGIN_PATH
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""))
+    const parsedResult: SonaraAuthResult = {
+      access_token: hashParams.get("access_token") || undefined,
+      refresh_token: hashParams.get("refresh_token") || undefined,
+      expires_in: hashParams.get("expires_in") || undefined,
+      scope: hashParams.get("scope") || undefined,
+      token_type: hashParams.get("token_type") || undefined,
+      error: hashParams.get("error") || undefined,
+      message: hashParams.get("message") || undefined,
+      details: hashParams.get("details") || undefined,
+    }
 
     setNextPath(parsedNextPath)
     setAuthResult(parsedResult)

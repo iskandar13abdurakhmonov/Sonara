@@ -17,9 +17,9 @@ export default function PlayerLayout({children} : { children: ReactNode}) {
       }
     >
       <AppSidebar />
-      <SidebarInset className="min-h-0 min-w-0">
-        <SidebarTrigger size="icon-lg" className="mt-2 ml-2"/>
-        <main className="flex min-h-0 flex-1 justify-center">{children}</main>
+      <SidebarInset className="mx-7 my-3">
+        <SidebarTrigger size="icon-lg"/>
+        <main>{children}</main>
       </SidebarInset>
     </SidebarProvider>
   )

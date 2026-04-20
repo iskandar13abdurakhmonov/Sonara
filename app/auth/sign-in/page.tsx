@@ -1,9 +1,10 @@
 import Link from "next/link"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import {
   DEFAULT_POST_LOGIN_PATH,
-  buildSonaraSignInUrl,
-  getSonaraApiUrl,
+  DEFAULT_SONARA_API_URL,
+  DEFAULT_SONARA_APP_URL,
 } from "@/lib/auth"
 import {
   Card,
@@ -13,7 +14,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Image } from "next/dist/client/image-component"
 
 type SignInPageProps = {
   searchParams?: Promise<{
@@ -23,9 +23,27 @@ type SignInPageProps = {
 
 export default async function Page({ searchParams }: SignInPageProps) {
   const params = searchParams ? await searchParams : undefined
-  const nextPath = params?.next || DEFAULT_POST_LOGIN_PATH
-  const signInUrl = buildSonaraSignInUrl(nextPath)
-  const apiUrl = getSonaraApiUrl()
+  const nextPath =
+    params?.next && params.next.startsWith("/")
+      ? params.next
+      : DEFAULT_POST_LOGIN_PATH
+  const apiUrl = new URL(
+    process.env.NEXT_PUBLIC_SONARA_API_URL?.trim() || DEFAULT_SONARA_API_URL,
+  )
+  const appUrl = new URL(
+    process.env.NEXT_PUBLIC_SONARA_APP_URL?.trim() || DEFAULT_SONARA_APP_URL,
+  )
+
+  apiUrl.pathname = "/auth/login"
+  apiUrl.search = ""
+  apiUrl.hash = ""
+
+  appUrl.pathname = "/auth/callback"
+  appUrl.search = ""
+  appUrl.hash = ""
+  appUrl.searchParams.set("next", nextPath)
+
+  apiUrl.searchParams.set("return_to", appUrl.toString())
 
   return (
     <main className="relative flex min-h-svh items-center justify-center overflow-hidden">
@@ -37,17 +55,12 @@ export default async function Page({ searchParams }: SignInPageProps) {
             /player when it completes.
           </CardDescription>
           <CardAction>
-            <Image
-              src="/logo-white.svg"
-              alt="logo"
-              width="80"
-              height="80"
-            />
+            <Image src="/logo-white.svg" alt="logo" width={80} height={80} />
           </CardAction>
         </CardHeader>
         <CardFooter className="flex-col gap-2">
           <Button className="w-full">
-            <Link href={signInUrl} prefetch={false}>
+            <Link href={apiUrl.toString()} prefetch={false}>
               Continue to Sign In
             </Link>
           </Button>
