@@ -1,18 +1,18 @@
 import type { StateCreator } from "zustand"
-import { getArtist, searchArtists } from "@/lib/artistService"
+import { getArtist, getArtistBanner, searchArtists } from "@/lib/artistService"
 
-export type SpotifyArtist = {
+export type SpotifyArtists = {
   id: string
   name: string
   genres?: string[]
   popularity?: number
-  type: string;
+  type: string
   followers?: {
     total?: number
   }
   images?: Array<{
-    url: string,
-    width: number,
+    url: string
+    width: number
     height: number
   }>
   external_urls?: {
@@ -20,18 +20,49 @@ export type SpotifyArtist = {
   }
 }
 
+export type SpotifyArtist = {
+  external_urls: {
+    spotify: string[]
+  }
+  followers: {
+    href: string
+    total: number
+  }
+  genres: string[]
+  href: string
+  id: string
+  images: Array<{
+    url: string
+    height: number
+    width: number
+  }>
+  name: string
+  popularity: number
+  type: string
+  uri: string
+}
+
 type SpotifySearchResponse = {
   artists?: {
-    items?: SpotifyArtist[]
+    items?: SpotifyArtists[]
   }
+}
+
+type AudioDbArtist = {
+  strArtistFanart?: string
+}
+
+type AudioDbArtistResponse = {
+  artists?: AudioDbArtist[] | null
 }
 
 export type ArtistSlice = {
   query: string
   searchLoading: boolean
   searchError: string | null
-  searchResults: SpotifyArtist[]
-  artist: SpotifyArtist
+  searchResults: SpotifyArtists[]
+  artist: SpotifyArtist | null
+  artistBanner: string
   setQuery: (query: string) => void
   searchArtist: (query: string) => Promise<void>
   getArtist: (id: string) => Promise<void>
@@ -42,6 +73,8 @@ export const createArtistSlice: StateCreator<ArtistSlice> = (set) => ({
   searchLoading: false,
   searchError: null,
   searchResults: [],
+  artist: null,
+  artistBanner: "",
   setQuery: (query) => set({ query }),
   searchArtist: async (query) => {
     const trimmedQuery = query.trim()
@@ -78,18 +111,30 @@ export const createArtistSlice: StateCreator<ArtistSlice> = (set) => ({
     }
   },
   getArtist: async (id: string) => {
+    set({
+      searchLoading: true,
+      searchError: null,
+    })
+
     try {
-      const { data } = await getArtist(id)
+      const { data: artist } = await getArtist(id)
+      const { data: bannerData } = await getArtistBanner(artist.name)
+      const artistBanner =
+        (bannerData as AudioDbArtistResponse).artists?.[0]?.strArtistFanart || ""
 
       set({
-        artist: data
+        artist,
+        artistBanner,
       })
     } catch (error) {
       set({
-        artist: []
+        artist: null,
+        artistBanner: "",
+        searchError:
+          error instanceof Error ? error.message : "Loading artist failed.",
       })
     } finally {
       set({ searchLoading: false })
     }
-  }
+  },
 })

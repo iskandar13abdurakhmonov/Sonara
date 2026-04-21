@@ -1,7 +1,7 @@
 "use client"
 
 import { type ChangeEvent, type FormEvent } from "react"
-import { PlusIcon, SearchIcon } from "lucide-react"
+import { SearchIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useGlobalStore } from "@/store/useStore"
@@ -14,7 +14,7 @@ import {
   ItemMedia,
   ItemTitle,
 } from "@/components/ui/item"
-import { SpotifyArtist } from "@/store/ArtistSlice"
+import { SpotifyArtists } from "@/store/ArtistSlice"
 import Image from "next/image"
 import {
   Card,
@@ -75,21 +75,29 @@ export default function Page() {
 
       <div className="grid grid-cols-6 gap-4 mt-4">
         {
-          searchResults.map((artist: SpotifyArtist) => {
+          searchResults.map((artist: SpotifyArtists) => {
             const artistImageUrl = artist.images?.[0]?.url
 
             return (
               <Card key={artist.id} className="relative mx-auto w-full max-w-sm pt-0">
                 <div className="absolute inset-0 z-30 aspect-square" />
-                <Image
-                  src={artistImageUrl || null}
-                  alt={artist.name}
-                  width="90"
-                  height="80"
-                  quality={100}
-                  sizes="100"
-                  className="relative z-20 aspect-square w-full object-contain"
-                />
+                <div className="relative z-20 aspect-square w-full overflow-hidden rounded-t-xl bg-muted">
+                  {artistImageUrl ? (
+                    <Image
+                      src={artistImageUrl}
+                      alt={artist.name}
+                      width={90}
+                      height={80}
+                      quality={100}
+                      sizes="100"
+                      className="aspect-square h-full w-full object-contain"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-sm font-medium text-muted-foreground">
+                      No image
+                    </div>
+                  )}
+                </div>
                 <CardHeader>
                   <CardAction>
                     <Badge variant="secondary">{artist.type}</Badge>

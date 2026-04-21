@@ -1,22 +1,25 @@
 "use client"
 
 import Link from "next/link"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import {
-  AUTH_STORAGE_KEY,
   DEFAULT_POST_LOGIN_PATH,
+  persistAuth,
   type SonaraAuthResult,
 } from "@/lib/auth"
 
 export default function AuthCallbackPage() {
   const router = useRouter()
-  const [authResult, setAuthResult] = useState<SonaraAuthResult | null>(null)
-  const [nextPath, setNextPath] = useState(DEFAULT_POST_LOGIN_PATH)
-  const [redirecting, setRedirecting] = useState(false)
+  const { authResult, nextPath } = useMemo(() => {
+    if (typeof window === "undefined") {
+      return {
+        authResult: null,
+        nextPath: DEFAULT_POST_LOGIN_PATH,
+      }
+    }
 
-  useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const nextParam = params.get("next")
     const parsedNextPath =
@@ -33,31 +36,31 @@ export default function AuthCallbackPage() {
       details: hashParams.get("details") || undefined,
     }
 
-    setNextPath(parsedNextPath)
-    setAuthResult(parsedResult)
+    return {
+      authResult: parsedResult,
+      nextPath: parsedNextPath,
+    }
+  }, [])
 
-    if (parsedResult.access_token) {
-      window.sessionStorage.setItem(
-        AUTH_STORAGE_KEY,
-        JSON.stringify({
-          ...parsedResult,
-          nextPath: parsedNextPath,
-          received_at: new Date().toISOString(),
-        }),
-      )
+  useEffect(() => {
+    if (authResult?.access_token) {
+      persistAuth({
+        ...authResult,
+        nextPath,
+      })
 
-      setRedirecting(true)
       const timeoutId = window.setTimeout(() => {
-        router.replace(parsedNextPath)
+        router.replace(nextPath)
       }, 900)
 
       return () => {
         window.clearTimeout(timeoutId)
       }
     }
-  }, [router])
+  }, [authResult, nextPath, router])
 
   const isSuccess = Boolean(authResult?.access_token) && !authResult?.error
+  const redirecting = isSuccess
 
   return (
     <main className="relative flex min-h-svh items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.3),_transparent_34%),linear-gradient(135deg,_#0f172a_0%,_#1d4ed8_38%,_#0f766e_100%)] px-6 py-16 text-white">

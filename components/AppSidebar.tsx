@@ -10,27 +10,37 @@ import {
   SidebarMenuButton,
   SidebarMenuItem, SidebarRail, useSidebar,
 } from "@/components/ui/sidebar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
   AudioLinesIcon,
-  ChevronDown,
+  BadgeCheckIcon,
+  BellIcon,
+  ChevronsUpDownIcon,
   HeadphonesIcon,
+  LogOutIcon,
   HomeIcon,
   LayoutGridIcon,
   LucideIcon,
+  SparklesIcon,
   SettingsIcon,
   Volume2Icon,
 } from "lucide-react"
-import { useEffect } from "react"
-import { Image } from "next/dist/client/image-component"
+import { useEffect, useState } from "react"
+import Image from "next/image"
 import { useTheme } from "next-themes"
 import Link from "next/link"
-import { usePathname } from "next/dist/client/components/navigation"
+import { usePathname, useRouter } from "next/navigation"
+import { clearStoredAuth } from "@/lib/auth"
+import { useGlobalStore } from "@/store/useStore"
 
 interface MenuItem {
   title: string;
@@ -91,19 +101,44 @@ function NavSection({ label, items, pathname }: NavSectionProps) {
 }
 
 export default function AppSidebar() {
-
   const {
-    isMobile,
-    openMobile,
-    setOpenMobile,
     open,
-    setOpen,
-    toggleSidebar,
-    state
   } = useSidebar()
 
-  const { theme } = useTheme()
+  const { resolvedTheme } = useTheme()
   const pathname = usePathname()
+  const router = useRouter()
+  const profile = useGlobalStore((state) => state.profile)
+  const getProfile = useGlobalStore((state) => state.getProfile)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (!profile.id) {
+      void getProfile()
+    }
+  }, [getProfile, profile.id])
+
+  const logoSrc =
+    mounted && resolvedTheme === "dark" ? "/logo-white.svg" : "/logo-black.svg"
+
+  const profileName = profile.display_name || "Your profile"
+  const profileEmail = profile.email || "Connect Spotify to load account details"
+  const profileInitials = profileName
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("") || "SP"
+  const profileImage = profile.images[0]?.url
+
+  const handleSignOut = () => {
+    clearStoredAuth()
+    router.push("/auth/sign-in")
+  }
 
   const mainMenuItems: MenuItem[] = [
     {
@@ -144,10 +179,10 @@ export default function AppSidebar() {
       <SidebarHeader>
         <div className="flex items-center">
           <Image
-            src="/logo-white.svg"
+            src={logoSrc}
             alt="logo"
-            width="50"
-            height="50"
+            width={50}
+            height={50}
           />
           {open && (
             <span className="ml-2 text-2xl font-bold uppercase">Sonara</span>
@@ -166,7 +201,76 @@ export default function AppSidebar() {
       <SidebarFooter className="gap-3 py-3">
         <SidebarMenu>
           <SidebarMenuItem>
-            Footer
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <SidebarMenuButton
+                  size="lg"
+                  className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                >
+                  <Avatar size="lg">
+                    <AvatarImage src={profileImage} alt={profileName} />
+                    <AvatarFallback>{profileInitials}</AvatarFallback>
+                  </Avatar>
+                  <div className="grid flex-1 text-left text-sm leading-tight">
+                    <span className="truncate font-medium">{profileName}</span>
+                    <span className="truncate text-xs text-muted-foreground">
+                      {profileEmail}
+                    </span>
+                  </div>
+                  <ChevronsUpDownIcon className="ml-auto" />
+                </SidebarMenuButton>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                side="top"
+                align="end"
+                sideOffset={8}
+                className="min-w-56 rounded-lg"
+              >
+                <DropdownMenuLabel className="p-0 font-normal">
+                  <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+                    <Avatar>
+                      <AvatarImage src={profileImage} alt={profileName} />
+                      <AvatarFallback>{profileInitials}</AvatarFallback>
+                    </Avatar>
+                    <div className="grid flex-1 text-left text-sm leading-tight">
+                      <span className="truncate font-medium">{profileName}</span>
+                      <span className="truncate text-xs text-muted-foreground">
+                        {profileEmail}
+                      </span>
+                    </div>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuGroup>
+                  <DropdownMenuItem>
+                    <SparklesIcon />
+                    Upgrade to Pro
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuGroup>
+                  <DropdownMenuItem>
+                    <BadgeCheckIcon />
+                    Account
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <BellIcon />
+                    Notifications
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="mailto:iskandar.13.aburahmonov@gmail.com">
+                      <HeadphonesIcon />
+                      Support
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleSignOut}>
+                  <LogOutIcon />
+                  Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
