@@ -14,6 +14,12 @@ const nextConfig = {
         port: "",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "www.theaudiodb.com",
+        port: "",
+        pathname: "/**",
+      },
     ],
   },
   devIndicators: false
