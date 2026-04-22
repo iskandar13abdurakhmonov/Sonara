@@ -25,3 +25,24 @@ export const getArtistBanner = async (query: string) => {
 export const getArtist = async (id: string) => {
   return await instance.get(`/artists/${id}`)
 }
+
+export const getArtistTopTracks = async (id: string) => {
+  return await instance.get(`/artists/${id}/top-tracks`)
+}
+
+export const getArtistAlbums = async (
+  id: string,
+  includeGroups = "album",
+  market = "US",
+  limit = 8,
+  offset = 0,
+) => {
+  return await instance.get(`/artists/${id}/albums`, {
+    params: {
+      include_groups: includeGroups,
+      market,
+      limit,
+      offset,
+    },
+  })
+}

@@ -1,5 +1,11 @@
 import type { StateCreator } from "zustand"
-import { getArtist, getArtistBanner, searchArtists } from "@/lib/artistService"
+import {
+  getArtist,
+  getArtistAlbums,
+  getArtistBanner,
+  getArtistTopTracks,
+  searchArtists,
+} from "@/lib/artistService"
 
 export type SpotifyArtists = {
   id: string
@@ -42,6 +48,102 @@ export type SpotifyArtist = {
   uri: string
 }
 
+export type TopTracks = {
+  album: {
+    album_type: string
+    total_tracks: number
+    available_markets: string[]
+    external_urls: {
+      spotify: string
+    }
+    href: string
+    id: string
+    images: Array<{
+      url: string
+      width: number
+      height: number
+    }>
+    name: string
+    release_date: string
+    release_date_precision: string
+    restrictions: {
+      reason: string
+    }
+    type: string
+    uri: string
+  }
+  artists: Array<{
+    external_urls: {
+      spotify: string
+    }
+    href: string
+    id: string
+    name: string
+    type: string
+    uri: string
+  }>
+  available_markets: string[]
+  disc_number: number
+  duration_ms: number
+  explicit: boolean
+  external_ids: {
+    isrc: string
+    ean: string
+    upc: string
+  }
+  external_urls: {
+    spotify: string
+  }
+  href: string
+  id: string
+  is_playable: boolean
+  restrictions: {
+    reason: string
+  }
+  name: string
+  popularity: number
+  preview_url: string
+  track_number: number
+  type: string
+  uri: string
+  is_local: boolean
+}
+
+export type ArtistAlbum = {
+  album_type: string
+  total_tracks: number
+  available_markets: string[]
+  external_urls: {
+    spotify: string
+  }
+  href: string
+  id: string
+  images: Array<{
+    url: string
+    width: number
+    height: number
+  }>
+  name: string
+  release_date: string
+  release_date_precision: string
+  restrictions: {
+    reason: string
+  }
+  type: string
+  uri: string
+  artists: Array<{
+    external_urls: {
+      spotify: string
+    }
+    href: string
+    id: string
+    name: string
+    type: string
+    uri: string
+  }>
+  album_group: string
+}
+
 type SpotifySearchResponse = {
   artists?: {
     items?: SpotifyArtists[]
@@ -56,6 +158,20 @@ type AudioDbArtistResponse = {
   artists?: AudioDbArtist[] | null
 }
 
+type ArtistTopTracksResponse = {
+  tracks: TopTracks[]
+}
+
+type ArtistAlbumsResponse = {
+  href: string
+  limit: number
+  next: string
+  offset: number
+  previous: string
+  total: number
+  items: ArtistAlbum[]
+}
+
 export type ArtistSlice = {
   query: string
   searchLoading: boolean
@@ -63,9 +179,19 @@ export type ArtistSlice = {
   searchResults: SpotifyArtists[]
   artist: SpotifyArtist | null
   artistBanner: string
+  artistTopTracks: TopTracks[]
+  artistAlbums: ArtistAlbum[]
   setQuery: (query: string) => void
   searchArtist: (query: string) => Promise<void>
   getArtist: (id: string) => Promise<void>
+  getArtistTopTracks: (id: string) => Promise<void>
+  getArtistAlbums: (
+    id: string,
+    include_groups?: string,
+    market?: string,
+    limit?: number,
+    offset?: number,
+  ) => Promise<void>
 }
 
 export const createArtistSlice: StateCreator<ArtistSlice> = (set) => ({
@@ -75,6 +201,8 @@ export const createArtistSlice: StateCreator<ArtistSlice> = (set) => ({
   searchResults: [],
   artist: null,
   artistBanner: "",
+  artistTopTracks: [],
+  artistAlbums: [],
   setQuery: (query) => set({ query }),
   searchArtist: async (query) => {
     const trimmedQuery = query.trim()
@@ -101,10 +229,21 @@ export const createArtistSlice: StateCreator<ArtistSlice> = (set) => ({
         searchError: artists.length ? null : "No artists matched your search.",
       })
     } catch (error) {
+      const errorMessage =
+        typeof error === "object" &&
+        error !== null &&
+        "response" in error &&
+        typeof error.response === "object" &&
+        error.response !== null &&
+        "data" in error.response
+          ? JSON.stringify(error.response.data)
+          : error instanceof Error
+            ? error.message
+            : "Spotify search failed."
+
       set({
         searchResults: [],
-        searchError:
-          error instanceof Error ? error.message : "Spotify search failed.",
+        searchError: errorMessage,
       })
     } finally {
       set({ searchLoading: false })
@@ -137,4 +276,52 @@ export const createArtistSlice: StateCreator<ArtistSlice> = (set) => ({
       set({ searchLoading: false })
     }
   },
+  getArtistTopTracks: async (id: string) => {
+    set({
+      searchLoading: true,
+      searchError: null,
+    })
+
+    try {
+      const { data } = await getArtistTopTracks(id)
+      const tracks = await (data as ArtistTopTracksResponse).tracks
+
+      set({
+        artistTopTracks: tracks
+      })
+    } catch (error) {
+      set({
+        artistTopTracks: []
+      })
+    } finally {
+      set({ searchLoading: false})
+    }
+  },
+  getArtistAlbums: async (
+    id: string,
+    include_groups = "album",
+    market = "US",
+    limit = 8,
+    offset = 0,
+  ) => {
+    set({
+      searchLoading: true,
+      searchError: null,
+    })
+
+    try {
+      const { data } = await getArtistAlbums(id, include_groups, market, limit, offset)
+      const albums = await (data as ArtistAlbumsResponse).items
+
+      set({
+        artistAlbums: albums
+      })
+    } catch (error) {
+      set({
+        artistAlbums: []
+      })
+    } finally {
+      set({ searchLoading: false})
+    }
+  }
 })

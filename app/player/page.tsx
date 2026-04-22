@@ -1,7 +1,7 @@
 "use client"
 
 import { type ChangeEvent, type FormEvent } from "react"
-import { SearchIcon } from "lucide-react"
+import { ImageIcon, SearchIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useGlobalStore } from "@/store/useStore"
@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useRouter } from "next/navigation"
+import { Empty, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 
 export default function Page() {
 
@@ -93,8 +94,17 @@ export default function Page() {
                       className="aspect-square h-full w-full object-contain"
                     />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center text-sm font-medium text-muted-foreground">
-                      No image
+                    <div className="flex h-full w-full items-center justify-center">
+                      <Empty>
+                        <EmptyHeader>
+                          <EmptyMedia variant="icon">
+                            <ImageIcon size="lg"/>
+                          </EmptyMedia>
+                          <EmptyTitle>
+                            No image
+                          </EmptyTitle>
+                        </EmptyHeader>
+                      </Empty>
                     </div>
                   )}
                 </div>

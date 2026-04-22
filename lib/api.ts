@@ -18,7 +18,7 @@ type RetriableRequestConfig = InternalAxiosRequestConfig & {
 }
 
 const refreshClient = axios.create({
-  timeout: 1000,
+  timeout: 10000,
 })
 
 let refreshPromise: Promise<string | null> | null = null
@@ -107,7 +107,7 @@ const getValidAccessToken = async () => {
 
 export const instance = axios.create({
   baseURL: process.env.NEXT_PUBLIC_SPOTIFY_API_URL,
-  timeout: 1000,
+  timeout: 10000,
 })
 
 instance.interceptors.request.use(
