@@ -15,13 +15,68 @@ import {
 
 type RetriableRequestConfig = InternalAxiosRequestConfig & {
   _retry?: boolean
+  _retryCount?: number
 }
 
 const refreshClient = axios.create({
   timeout: 10000,
 })
 
+const RATE_LIMIT_STORAGE_KEY = "sonara.spotify.rate-limit-until"
+const RATE_LIMIT_MAX_RETRIES = 1
+const RATE_LIMIT_AUTO_RETRY_MAX_MS = 30_000
 let refreshPromise: Promise<string | null> | null = null
+
+const sleep = (ms: number) =>
+  new Promise((resolve) => {
+    window.setTimeout(resolve, ms)
+  })
+
+const getRetryDelayMs = (retryAfter: unknown) => {
+  const retryAfterSeconds = Number(retryAfter)
+
+  if (Number.isFinite(retryAfterSeconds) && retryAfterSeconds >= 0) {
+    return retryAfterSeconds * 1000
+  }
+
+  return 1000
+}
+
+const getStoredRateLimitUntil = () => {
+  if (typeof window === "undefined") {
+    return 0
+  }
+
+  const storedUntil = Number(
+    window.sessionStorage.getItem(RATE_LIMIT_STORAGE_KEY),
+  )
+
+  return Number.isFinite(storedUntil) ? storedUntil : 0
+}
+
+const setStoredRateLimitUntil = (until: number) => {
+  if (typeof window === "undefined") {
+    return
+  }
+
+  window.sessionStorage.setItem(RATE_LIMIT_STORAGE_KEY, String(until))
+}
+
+const clearStoredRateLimitUntil = () => {
+  if (typeof window === "undefined") {
+    return
+  }
+
+  window.sessionStorage.removeItem(RATE_LIMIT_STORAGE_KEY)
+}
+
+const createRateLimitError = (retryAfterMs: number) => {
+  return new Error(
+    `Spotify rate limit is active. Try again in ${Math.ceil(
+      retryAfterMs / 1000,
+    )} seconds.`,
+  )
+}
 
 const setAuthorizationHeader = (
   headers: AxiosRequestHeaders,
@@ -116,6 +171,15 @@ instance.interceptors.request.use(
       return config
     }
 
+    const rateLimitUntil = getStoredRateLimitUntil()
+    const retryAfterMs = rateLimitUntil - Date.now()
+
+    if (retryAfterMs > 0) {
+      return Promise.reject(createRateLimitError(retryAfterMs))
+    }
+
+    clearStoredRateLimitUntil()
+
     const accessToken = await getValidAccessToken()
 
     if (accessToken) {
@@ -135,6 +199,23 @@ instance.interceptors.response.use(
     }
 
     const config = error.config as RetriableRequestConfig | undefined
+
+    if (config && error.response?.status === 429) {
+      const retryDelayMs = getRetryDelayMs(error.response.headers["retry-after"])
+      setStoredRateLimitUntil(Date.now() + retryDelayMs)
+      config._retryCount = config._retryCount ?? 0
+
+      if (
+        retryDelayMs <= RATE_LIMIT_AUTO_RETRY_MAX_MS &&
+        config._retryCount < RATE_LIMIT_MAX_RETRIES
+      ) {
+        config._retryCount += 1
+
+        await sleep(retryDelayMs)
+
+        return instance(config)
+      }
+    }
 
     if (!config || config._retry || error.response?.status !== 401) {
       return Promise.reject(error)

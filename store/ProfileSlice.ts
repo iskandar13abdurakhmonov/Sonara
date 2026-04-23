@@ -33,6 +33,8 @@ export type ProfileSlice = {
   getProfile: () => Promise<SpotifyProfile | null>
 }
 
+let profileRequest: Promise<SpotifyProfile | null> | null = null
+
 export const createProfileSlice: StateCreator<ProfileSlice> = (set) => ({
   profile: {
     country: "",
@@ -57,16 +59,24 @@ export const createProfileSlice: StateCreator<ProfileSlice> = (set) => ({
     uri: "",
   },
   getProfile: async () => {
-    try {
-      const { data } = await getProfile()
+    if (!profileRequest) {
+      profileRequest = (async () => {
+        try {
+          const { data } = await getProfile()
 
-      set({
-        profile: data,
-      })
+          set({
+            profile: data,
+          })
 
-      return data
-    } catch (error) {
-      return null
+          return data
+        } catch (error) {
+          return null
+        } finally {
+          profileRequest = null
+        }
+      })()
     }
+
+    return profileRequest
   },
 })

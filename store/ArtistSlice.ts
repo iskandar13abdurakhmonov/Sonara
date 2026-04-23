@@ -172,6 +172,26 @@ type ArtistAlbumsResponse = {
   items: ArtistAlbum[]
 }
 
+type CachedArtistDetails = {
+  artist: SpotifyArtist
+  artistBanner: string
+}
+
+const searchCache = new Map<string, SpotifyArtists[]>()
+const searchRequests = new Map<string, Promise<void>>()
+const artistDetailsCache = new Map<string, CachedArtistDetails>()
+const artistDetailsRequests = new Map<string, Promise<void>>()
+const artistAlbumsCache = new Map<string, ArtistAlbum[]>()
+const artistAlbumsRequests = new Map<string, Promise<void>>()
+
+const getArtistAlbumsCacheKey = (
+  id: string,
+  includeGroups: string,
+  market: string,
+  limit: number,
+  offset: number,
+) => [id, includeGroups, market, limit, offset].join(":")
+
 export type ArtistSlice = {
   query: string
   searchLoading: boolean
@@ -206,6 +226,7 @@ export const createArtistSlice: StateCreator<ArtistSlice> = (set) => ({
   setQuery: (query) => set({ query }),
   searchArtist: async (query) => {
     const trimmedQuery = query.trim()
+    const cacheKey = trimmedQuery.toLowerCase()
 
     if (!trimmedQuery) {
       set({
@@ -215,66 +236,116 @@ export const createArtistSlice: StateCreator<ArtistSlice> = (set) => ({
       return
     }
 
+    const cachedSearchResults = searchCache.get(cacheKey)
+
+    if (cachedSearchResults) {
+      set({
+        searchResults: cachedSearchResults,
+        searchError: cachedSearchResults.length
+          ? null
+          : "No artists matched your search.",
+      })
+      return
+    }
+
+    const existingSearchRequest = searchRequests.get(cacheKey)
+
+    if (existingSearchRequest) {
+      return existingSearchRequest
+    }
+
     set({
       searchLoading: true,
       searchError: null,
     })
 
-    try {
-      const { data } = await searchArtists(trimmedQuery)
-      const artists = (data as SpotifySearchResponse).artists?.items ?? []
+    const searchRequest = (async () => {
+      try {
+        const { data } = await searchArtists(trimmedQuery)
+        const artists = (data as SpotifySearchResponse).artists?.items ?? []
 
-      set({
-        searchResults: artists,
-        searchError: artists.length ? null : "No artists matched your search.",
-      })
-    } catch (error) {
-      const errorMessage =
-        typeof error === "object" &&
-        error !== null &&
-        "response" in error &&
-        typeof error.response === "object" &&
-        error.response !== null &&
-        "data" in error.response
-          ? JSON.stringify(error.response.data)
-          : error instanceof Error
-            ? error.message
-            : "Spotify search failed."
+        searchCache.set(cacheKey, artists)
 
-      set({
-        searchResults: [],
-        searchError: errorMessage,
-      })
-    } finally {
-      set({ searchLoading: false })
-    }
+        set({
+          searchResults: artists,
+          searchError: artists.length ? null : "No artists matched your search.",
+        })
+      } catch (error) {
+        const errorMessage =
+          typeof error === "object" &&
+          error !== null &&
+          "response" in error &&
+          typeof error.response === "object" &&
+          error.response !== null &&
+          "data" in error.response
+            ? JSON.stringify(error.response.data)
+            : error instanceof Error
+              ? error.message
+              : "Spotify search failed."
+
+        set({
+          searchResults: [],
+          searchError: errorMessage,
+        })
+      } finally {
+        searchRequests.delete(cacheKey)
+        set({ searchLoading: false })
+      }
+    })()
+
+    searchRequests.set(cacheKey, searchRequest)
+
+    return searchRequest
   },
   getArtist: async (id: string) => {
+    const cachedArtistDetails = artistDetailsCache.get(id)
+
+    if (cachedArtistDetails) {
+      set(cachedArtistDetails)
+      return
+    }
+
+    const existingArtistDetailsRequest = artistDetailsRequests.get(id)
+
+    if (existingArtistDetailsRequest) {
+      return existingArtistDetailsRequest
+    }
+
     set({
       searchLoading: true,
       searchError: null,
     })
 
-    try {
-      const { data: artist } = await getArtist(id)
-      const { data: bannerData } = await getArtistBanner(artist.name)
-      const artistBanner =
-        (bannerData as AudioDbArtistResponse).artists?.[0]?.strArtistFanart || ""
+    const artistDetailsRequest = (async () => {
+      try {
+        const { data: artist } = await getArtist(id)
+        const { data: bannerData } = await getArtistBanner(artist.name)
+        const artistBanner =
+          (bannerData as AudioDbArtistResponse).artists?.[0]?.strArtistFanart ||
+          ""
+        const nextArtistDetails = {
+          artist,
+          artistBanner,
+        }
 
-      set({
-        artist,
-        artistBanner,
-      })
-    } catch (error) {
-      set({
-        artist: null,
-        artistBanner: "",
-        searchError:
-          error instanceof Error ? error.message : "Loading artist failed.",
-      })
-    } finally {
-      set({ searchLoading: false })
-    }
+        artistDetailsCache.set(id, nextArtistDetails)
+        set(nextArtistDetails)
+      } catch (error) {
+        set({
+          artist: null,
+          artistBanner: "",
+          searchError:
+            error instanceof Error ? error.message : "Loading artist failed.",
+        })
+      } finally {
+        artistDetailsRequests.delete(id)
+        set({ searchLoading: false })
+      }
+    })()
+
+    artistDetailsRequests.set(id, artistDetailsRequest)
+
+    return artistDetailsRequest
   },
   getArtistTopTracks: async (id: string) => {
     set({
@@ -304,24 +375,58 @@ export const createArtistSlice: StateCreator<ArtistSlice> = (set) => ({
     limit = 8,
     offset = 0,
   ) => {
+    const cacheKey = getArtistAlbumsCacheKey(
+      id,
+      include_groups,
+      market,
+      limit,
+      offset,
+    )
+    const cachedArtistAlbums = artistAlbumsCache.get(cacheKey)
+
+    if (cachedArtistAlbums) {
+      set({ artistAlbums: cachedArtistAlbums })
+      return
+    }
+
+    const existingArtistAlbumsRequest = artistAlbumsRequests.get(cacheKey)
+
+    if (existingArtistAlbumsRequest) {
+      return existingArtistAlbumsRequest
+    }
+
     set({
       searchLoading: true,
       searchError: null,
     })
 
-    try {
-      const { data } = await getArtistAlbums(id, include_groups, market, limit, offset)
-      const albums = await (data as ArtistAlbumsResponse).items
+    const artistAlbumsRequest = (async () => {
+      try {
+        const { data } = await getArtistAlbums(
+          id,
+          include_groups,
+          market,
+          limit,
+          offset,
+        )
+        const albums = (data as ArtistAlbumsResponse).items
 
-      set({
-        artistAlbums: albums
-      })
-    } catch (error) {
-      set({
-        artistAlbums: []
-      })
-    } finally {
-      set({ searchLoading: false})
-    }
-  }
+        artistAlbumsCache.set(cacheKey, albums)
+        set({
+          artistAlbums: albums,
+        })
+      } catch (error) {
+        set({
+          artistAlbums: [],
+        })
+      } finally {
+        artistAlbumsRequests.delete(cacheKey)
+        set({ searchLoading: false })
+      }
+    })()
+
+    artistAlbumsRequests.set(cacheKey, artistAlbumsRequest)
+
+    return artistAlbumsRequest
+  },
 })

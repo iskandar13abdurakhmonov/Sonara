@@ -49,7 +49,7 @@ export default function Page() {
   }
 
   const handleViewArtist = (id: string) => {
-    router.push(`/player/${id}`)
+    router.push(`/player/artist/${id}`)
   }
 
   return (

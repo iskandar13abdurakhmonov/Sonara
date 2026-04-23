@@ -4,6 +4,7 @@ import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { cn } from "@/lib/utils";
 import { TooltipProvider } from "@/components/ui/tooltip"
+import Script from "next/script"
 
 const inter = Inter({subsets:['latin'],variable:'--font-sans'})
 
@@ -34,6 +35,10 @@ export default function RootLayout({
       )}
     >
       <body>
+        <Script
+          src="https://mcp.figma.com/mcp/html-to-design/capture.js"
+          strategy="afterInteractive"
+        />
         <ThemeProvider>
           <TooltipProvider>{children}</TooltipProvider>
         </ThemeProvider>

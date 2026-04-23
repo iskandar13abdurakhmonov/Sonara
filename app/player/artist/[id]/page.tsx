@@ -16,6 +16,7 @@ import { CheckIcon, UserRoundPlus } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { ArtistAlbum } from "@/store/ArtistSlice"
+import { useRouter } from "next/navigation"
 
 type TabsTriggersType = {
   id: number
@@ -48,6 +49,7 @@ const TabTriggers = [
 
 export default function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
+  const router = useRouter()
 
   const getArtist = useGlobalStore((state) => state.getArtist)
   const getArtistAlbums = useGlobalStore((state) => state.getArtistAlbums)
@@ -114,6 +116,10 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
   const handleTabChange = async (value: string) => {
     setCurrentTab(value)
     await getArtistAlbums(id, value, "US", 8, 0)
+  }
+
+  const handleNavigateToAlbum = (id: string) => {
+    router.push(`/player/album/${id}`)
   }
 
   if (!artist) {
@@ -197,7 +203,11 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                 const imageToDisplay = album.images[0]?.url
 
                 return (
-                  <Card key={album.id} className="h-full overflow-hidden pt-0">
+                  <Card
+                    key={album.id}
+                    className="h-full overflow-hidden pt-0 transition-all duration-300 hover:scale-105 hover:shadow-xl"
+                    onClick={() => handleNavigateToAlbum(album.id)}
+                  >
                     {imageToDisplay ? (
                       <Image
                         src={imageToDisplay}
