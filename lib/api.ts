@@ -146,7 +146,7 @@ const refreshAccessToken = async () => {
   return refreshPromise
 }
 
-const getValidAccessToken = async () => {
+export const getValidAccessToken = async () => {
   const auth = getStoredAuth()
 
   if (!auth?.access_token) {

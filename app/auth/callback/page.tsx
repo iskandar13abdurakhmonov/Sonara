@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useEffect, useMemo } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import {
@@ -12,20 +12,19 @@ import {
 
 export default function AuthCallbackPage() {
   const router = useRouter()
-  const { authResult, nextPath } = useMemo(() => {
-    if (typeof window === "undefined") {
-      return {
-        authResult: null,
-        nextPath: DEFAULT_POST_LOGIN_PATH,
-      }
-    }
+  const [authResult, setAuthResult] = useState<SonaraAuthResult | null>(null)
+  const [nextPath, setNextPath] = useState(DEFAULT_POST_LOGIN_PATH)
+  const [isHydrated, setIsHydrated] = useState(false)
 
+  useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const nextParam = params.get("next")
     const parsedNextPath =
       nextParam && nextParam.startsWith("/") ? nextParam : DEFAULT_POST_LOGIN_PATH
     const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""))
-    const parsedResult: SonaraAuthResult = {
+
+    setNextPath(parsedNextPath)
+    setAuthResult({
       access_token: hashParams.get("access_token") || undefined,
       refresh_token: hashParams.get("refresh_token") || undefined,
       expires_in: hashParams.get("expires_in") || undefined,
@@ -34,12 +33,8 @@ export default function AuthCallbackPage() {
       error: hashParams.get("error") || undefined,
       message: hashParams.get("message") || undefined,
       details: hashParams.get("details") || undefined,
-    }
-
-    return {
-      authResult: parsedResult,
-      nextPath: parsedNextPath,
-    }
+    })
+    setIsHydrated(true)
   }, [])
 
   useEffect(() => {
@@ -58,6 +53,25 @@ export default function AuthCallbackPage() {
       }
     }
   }, [authResult, nextPath, router])
+
+  if (!isHydrated) {
+    return (
+      <main className="relative flex min-h-svh items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.3),_transparent_34%),linear-gradient(135deg,_#0f172a_0%,_#1d4ed8_38%,_#0f766e_100%)] px-6 py-16 text-white">
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.07)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.07)_1px,transparent_1px)] bg-[size:72px_72px] opacity-20" />
+        <section className="relative z-10 w-full max-w-xl rounded-[2rem] border border-white/15 bg-white/10 p-8 shadow-2xl shadow-slate-950/40 backdrop-blur">
+          <p className="text-sm uppercase tracking-[0.32em] text-cyan-100/70">
+            Sonara
+          </p>
+          <h1 className="mt-4 text-4xl font-semibold tracking-tight text-balance">
+            Completing Spotify sign-in...
+          </h1>
+          <p className="mt-4 text-sm leading-6 text-cyan-50/80">
+            Finishing the authorization flow.
+          </p>
+        </section>
+      </main>
+    )
+  }
 
   const isSuccess = Boolean(authResult?.access_token) && !authResult?.error
   const redirecting = isSuccess

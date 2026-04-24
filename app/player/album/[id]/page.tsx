@@ -54,6 +54,7 @@ export default function Page({
   const getAlbum = useGlobalStore((state) => state.getAlbum)
   const album = useGlobalStore((state) => state.album)
   const albumLoading = useGlobalStore((state) => state.albumLoading)
+  const requestPlayback = useGlobalStore((state) => state.requestPlayback)
 
   useEffect(() => {
     if (!id) {
@@ -89,6 +90,13 @@ export default function Page({
     (sum, track) => sum + track.duration_ms,
     0,
   )
+
+  const handleTrackSelect = async (trackIndex: number) => {
+    requestPlayback({
+      playbackUri: album.uri,
+      offset: trackIndex,
+    })
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -201,8 +209,12 @@ export default function Page({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {album.tracks.items.map((track) => (
-                  <TableRow key={track.id}>
+                {album.tracks.items.map((track, index) => (
+                  <TableRow
+                    key={track.id}
+                    className="cursor-pointer"
+                    onClick={() => void handleTrackSelect(index)}
+                  >
                     <TableCell className="text-muted-foreground">
                       {track.track_number}
                     </TableCell>
