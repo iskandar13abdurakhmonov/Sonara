@@ -183,15 +183,20 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
         </div>
       </div>
       <div>
-        <h2 className="text-3xl font-bold mb-3">Discography</h2>
+        <div className="flex align-center justify-between">
+          <h2 className="mb-3 text-3xl font-bold">Discography</h2>
+          <span
+            className="cursor-pointer"
+            onClick={() => router.push(`/player/artist/${id}/works`)}
+          >
+            Show all
+          </span>
+        </div>
         <Tabs value={currentTab} onValueChange={handleTabChange}>
           <TabsList className="w-[400px]">
             {TabTriggers.map((item: TabsTriggersType) => {
               return (
-                <TabsTrigger
-                  value={item.value}
-                  key={item.id}
-                >
+                <TabsTrigger value={item.value} key={item.id}>
                   {item.title}
                 </TabsTrigger>
               )
@@ -225,7 +230,9 @@ export default function Page({ params }: { params: Promise<{ id: string }> }) {
                       <CardTitle className="truncate">{album.name}</CardTitle>
                     </CardHeader>
                     <CardFooter className="mt-auto flex items-center justify-between">
-                      <CardDescription>{album.release_date.split("-")[0]}</CardDescription>
+                      <CardDescription>
+                        {album.release_date.split("-")[0]}
+                      </CardDescription>
                       <CardDescription>{album.type}</CardDescription>
                     </CardFooter>
                   </Card>
